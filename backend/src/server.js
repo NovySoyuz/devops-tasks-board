@@ -38,6 +38,10 @@ app.post("/tasks", async (req, res) => {
     res.status(201).json(rows[0]);
 });
 
-app.listen(PORT, () => {
-    console.log(`✅ Backend démarré sur http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`✅ Backend démarré sur http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
