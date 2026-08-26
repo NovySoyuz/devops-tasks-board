@@ -3,7 +3,6 @@ services:
   - type: web
     name: devops-tasks-backend
     env: node
-    plan: starter
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
@@ -21,7 +20,6 @@ services:
   - type: web
     name: devops-tasks-frontend
     env: static
-    plan: starter
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
