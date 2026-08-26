@@ -38,6 +38,14 @@ app.post("/tasks", async (req, res) => {
     res.status(201).json(rows[0]);
 });
 
+// Suppression d'une tâche par son identifiant
+app.delete("/tasks/:id", async (req, res) => {
+    const { id } = req.params;
+    const { rowCount } = await pool.query("DELETE FROM tasks WHERE id = $1", [id]);
+    if (rowCount === 0) return res.status(404).json({ error: "Tâche introuvable" });
+    res.status(204).end();
+});
+
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`✅ Backend démarré sur http://localhost:${PORT}`);

@@ -7,8 +7,8 @@ COMPOSE_FILE = infra/docker/docker-compose.yaml
 K8S_DIR      = infra/k8s
 INIT_SQL     = infra/k8s/postgres/init.sql
 
-.PHONY: help init up down restart build logs ps \
-        k8s-init k8s-up k8s-down k8s-status
+.PHONY: help init up down restart build deploy logs ps \
+        k8s-init k8s-up k8s-down k8s-status k8s-deploy
 
 # ── Aide ────────────────────────────────────────────────────────────────────
 help:
@@ -21,12 +21,14 @@ help:
 	@echo "    make down       → arrêter et supprimer les conteneurs"
 	@echo "    make restart    → redémarrer les conteneurs"
 	@echo "    make build      → rebuilder les images Docker"
+	@echo "    make deploy     → rebuilder et relancer sans toucher à la BDD"
 	@echo "    make logs       → suivre les logs en temps réel"
 	@echo "    make ps         → statut des conteneurs"
 	@echo ""
 	@echo "  Kubernetes :"
 	@echo "    make k8s-init   → 1er déploiement (applique tous les manifests)"
 	@echo "    make k8s-up     → appliquer les manifests k8s"
+	@echo "    make k8s-deploy → rebuilder les images et redémarrer les pods"
 	@echo "    make k8s-down   → supprimer toutes les ressources k8s"
 	@echo "    make k8s-status → afficher l'état des pods / services"
 	@echo ""
@@ -56,10 +58,13 @@ down:
 
 restart:
 	docker compose -f $(COMPOSE_FILE) restart
-
 # Rebuilder les images sans redémarrer
 build:
 	docker compose -f $(COMPOSE_FILE) build
+
+# Rebuilder et relancer sans toucher à la BDD
+deploy:
+	docker compose -f $(COMPOSE_FILE) up -d --build
 
 # Suivre les logs de tous les services
 logs:
@@ -100,3 +105,14 @@ k8s-down:
 # Afficher l'état des pods, services et ingress
 k8s-status:
 	kubectl get pods,services,ingress
+
+# Rebuilder les images directement dans le daemon Docker de minikube, puis redémarrer les pods
+k8s-deploy:
+	@echo "🔨 Build des images dans le daemon Docker de minikube..."
+	eval $$(minikube docker-env) && \
+		docker build -t tasks-frontend:latest ./frontend && \
+		docker build -t tasks-backend:latest ./backend
+	@echo "♻️  Redémarrage des pods..."
+	kubectl rollout restart deployment/frontend-deployment
+	kubectl rollout restart deployment/backend-deployment
+	@echo "✅ Déploiement terminé — vérifiez avec : make k8s-status"
