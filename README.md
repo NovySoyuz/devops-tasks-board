@@ -1,22 +1,20 @@
 # DevOps Tasks Board – Projet pédagogique CESI
 
-Application web **3-tiers** (Frontend React + Backend Node.js + Base PostgreSQL) servant de support pédagogique aux pratiques DevOps / DevSecOps.
+Application web **3-tiers** (Frontend React + Backend Node.js + PostgreSQL) avec authentification Keycloak, servant de support aux pratiques DevOps / DevSecOps.
 
 ---
 
-## Statut du projet
+## Stack
 
-| Composant | Statut |
+| Composant | Technologie |
 |---|---|
-| Frontend React (Vite) | ✅ Opérationnel |
-| Backend Node.js (Express) | ✅ Opérationnel |
-| Base de données PostgreSQL | ✅ Opérationnel |
-| Conteneurisation Docker | ✅ Opérationnel (`docker-compose`) |
-| Déploiement Kubernetes (Minikube) | ✅ Opérationnel |
-| Ingress Nginx | ✅ Opérationnel |
-| Persistance BDD (PVC) | ✅ Opérationnel |
-| Tests unitaires (Jest / Vitest) | ✅ Opérationnel |
-| CI/CD (GitHub Actions) | ✅ Opérationnel |
+| Frontend | React + Vite |
+| Backend | Node.js + Express |
+| Base de données | PostgreSQL 15 |
+| Authentification | Keycloak 26 |
+| Conteneurisation | Docker Compose |
+| Orchestration | Kubernetes (Minikube) + Ingress Nginx |
+| CI/CD | GitHub Actions |
 
 ---
 
@@ -26,12 +24,13 @@ Application web **3-tiers** (Frontend React + Backend Node.js + Base PostgreSQL)
 Navigateur
     │
     ▼
-Ingress Nginx (http://192.168.49.2)
-    ├── /        → frontend-service:5173  (React + Vite dev server)
-    └── /api/*   → backend-service:3000  (Express API — strip /api par rewrite)
-                        │
-                        ▼
-                 postgres-service:5432  (PostgreSQL 15 + PVC 1Gi)
+Ingress Nginx (HTTPS)
+    ├── /              → frontend-service:5173  (React + Vite)
+    ├── /api/*         → backend-service:3000   (Express — strip /api)
+    ├── /realms, /admin, /resources, /js
+    │                  → keycloak-service:8080  (Keycloak 26)
+    │
+    └── backend-service → postgres-service:5432 (PostgreSQL + PVC)
 ```
 
 ---
@@ -40,24 +39,18 @@ Ingress Nginx (http://192.168.49.2)
 
 ```
 devops-tasks-board/
-├── Makefile              # Commandes de déploiement (Docker & Kubernetes)
+├── Makefile              # Commandes de déploiement
 ├── backend/              # API Node.js / Express
-│   └── src/
-│       ├── server.js
-│       ├── db.js
-│       └── __tests__/    # Tests Jest + Supertest
 ├── frontend/             # SPA React / Vite
-│   └── src/
-│       ├── App.jsx
-│       └── __tests__/    # Tests Vitest + Testing Library
 └── infra/
     ├── docker/           # docker-compose.yaml
     └── k8s/              # Manifests Kubernetes
         ├── config/       # ConfigMap & Secret
         ├── postgres/     # Deployment, Service, PVC, init.sql
+        ├── keycloak/     # Deployment, Service, PVC
         ├── backend/      # Deployment & Service
         ├── frontend/     # Deployment & Service
-        └── ingress.yaml  # Ingress Nginx
+        └── ingress.yaml  # Ingress Nginx (3 ressources)
 ```
 
 ---
@@ -65,182 +58,87 @@ devops-tasks-board/
 ## Prérequis
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [Make](https://www.gnu.org/software/make/) *(inclus sur Linux/macOS)*
-- [Node.js 24+](https://nodejs.org/) *(optionnel, pour dev local)*
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) + [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Make](https://www.gnu.org/software/make/)
 
 ---
 
-## Démarrage rapide avec Make
-
-### Docker Compose *(dev local)*
+## Démarrage avec Docker *(dev local)*
 
 ```bash
-# 1ère installation : build + démarrage + initialisation de la base de données
-make init
-
-# Démarrer / Arrêter
-make up
-make down
-
-# Autres commandes utiles
-make restart   # redémarrer les conteneurs
-make build     # rebuilder les images Docker
-make logs      # suivre les logs en temps réel
-make ps        # statut des conteneurs
+make init    # 1ère fois : build + démarrage + init BDD
+make up      # démarrer (ou rebuilder si code modifié)
+make down    # arrêter
+make logs    # suivre les logs
 ```
 
-Accès : [http://localhost:5173](http://localhost:5173) (frontend) — [http://localhost:3000](http://localhost:3000) (backend)
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend | http://localhost:3000 |
+| Keycloak admin | http://localhost:8080 (admin / admin) |
 
-### Kubernetes *(Minikube)*
-
-```bash
-# 1er déploiement complet
-make k8s-init
-
-# Mettre à jour les ressources
-make k8s-up
-
-# Vérifier l'état des pods
-make k8s-status
-
-# Tout supprimer
-make k8s-down
-```
-
-> `make help` affiche la liste complète des commandes disponibles.
+> **Config Keycloak (une seule fois) :** créer le realm `devops-tasks`, le client public `devops-tasks-frontend` (redirect URI : `http://localhost:5173/*`, web origin : `http://localhost:5173`), et un utilisateur de test.
 
 ---
 
-## Installation manuelle
+## Démarrage avec Kubernetes *(Minikube)*
 
-### Option 1 — Docker Compose
-
-```bash
-cd infra/docker
-docker compose up --build
-```
-
-```bash
-docker compose stop    # arrêter sans supprimer
-docker compose start   # relancer
-docker compose down    # arrêter et supprimer les conteneurs
-```
-
----
-
-### Option 2 — Kubernetes avec Minikube
-
-#### 1. Démarrer Minikube et activer l'Ingress
+#### 1. Préparer Minikube
 
 ```bash
 minikube start
 minikube addons enable ingress
 
-# Attendre que le contrôleur Ingress soit prêt (~1 min)
-kubectl get pods -n ingress-nginx
-```
-
-#### 2. Construire les images Docker dans Minikube
-
-```bash
-# Pointer Docker vers le daemon Minikube
+# Builder les images dans le daemon Minikube
 eval $(minikube docker-env)
-
-# Builder les images
 docker build -t tasks-backend:latest ./backend
 docker build -t tasks-frontend:latest ./frontend
 ```
 
-#### 3. Déployer les manifests Kubernetes
+#### 2. Déployer
 
 ```bash
-# ConfigMap & Secret
-kubectl apply -f infra/k8s/config/
-
-# Base de données
-kubectl apply -f infra/k8s/postgres/
-
-# Backend & Frontend
-kubectl apply -f infra/k8s/backend/
-kubectl apply -f infra/k8s/frontend/
-
-# Ingress
-kubectl apply -f infra/k8s/ingress.yaml
+make k8s-init     # applique tous les manifests + génère le cert TLS
+make k8s-status   # vérifier que les pods sont Running
 ```
 
-#### 4. Vérifier que tout tourne
+#### 3. Accéder
 
 ```bash
-kubectl get pods
-# Attendre que tous les pods soient en STATUS Running
+minikube ip       # ex : 192.168.49.2
 ```
 
-#### 5. Exposer l'Ingress sur la machine locale
+| Service | URL |
+|---|---|
+| Application | https://\<minikube-ip\> *(accepter l'alerte certificat)* |
+| Keycloak admin | https://\<minikube-ip\>/admin (admin / admin) |
+
+> **Config Keycloak (une seule fois) :** créer le realm `devops-tasks`, le client public `devops-tasks-frontend` (redirect URI : `https://<minikube-ip>/*`, web origin : `https://<minikube-ip>`), et un utilisateur de test.
+
+#### Commandes utiles
 
 ```bash
-# Dans un terminal dédié (laisser ouvert)
-minikube tunnel
+make k8s-deploy   # rebuilder les images et relancer les pods
+make k8s-down     # tout supprimer
+make k8s-status   # état des pods / services / ingress
 ```
-
-#### 6. Accéder à l'application
-
-Ouvrir [http://192.168.49.2](http://192.168.49.2) dans le navigateur.
 
 ---
 
 ## Tests
 
 ```bash
-# Backend (Jest + Supertest)
-cd backend && npm test
-
-# Frontend (Vitest + Testing Library)
-cd frontend && npm test
+cd backend  && npm test   # Jest + Supertest
+cd frontend && npm test   # Vitest + Testing Library
 ```
 
-La CI GitHub Actions exécute automatiquement lint + tests + build sur chaque push et Pull Request.
+La CI GitHub Actions exécute lint + tests + build sur chaque push et Pull Request.
 
 ---
 
-## Commandes utiles (kubectl)
+## Notes
 
-```bash
-# État des pods
-kubectl get pods
-
-# Logs d'un service
-kubectl logs deployment/backend-deployment
-kubectl logs deployment/postgres-deployment
-
-# Redémarrer un déploiement
-kubectl rollout restart deployment/backend-deployment
-
-# Supprimer tout et repartir de zéro
-kubectl delete -f infra/k8s/ingress.yaml
-kubectl delete -f infra/k8s/frontend/
-kubectl delete -f infra/k8s/backend/
-kubectl delete -f infra/k8s/postgres/
-kubectl delete -f infra/k8s/config/
-```
-
----
-
-## Points d'attention
-
-- **Ingress splitté** : deux ressources Ingress distinctes (`ingress-api` avec rewrite, `ingress-frontend` sans) pour éviter la corruption du `Content-Type` des modules JS Vite.
-- **VITE_API_URL** : le frontend appelle `/api` (chemin relatif). L'Ingress route vers le backend en supprimant le préfixe `/api`.
-- **Init SQL** : le script `init.sql` n'est exécuté par PostgreSQL qu'au **premier démarrage** d'un volume vide. Si le volume existe déjà, l'exécuter manuellement via `kubectl exec`.
-
----
-
-## Objectifs pédagogiques
-
-- Conteneurisation avec Docker & Docker Compose
-- Orchestration avec Kubernetes (Minikube)
-- Exposition via Ingress Nginx avec réécriture de routes
-- Persistance des données avec PersistentVolumeClaim (PVC)
-- Automatisation du déploiement avec Make
-- Tests unitaires et d'intégration (Jest, Vitest, Supertest)
-- CI/CD avec GitHub Actions (lint → tests → build)
+- **HTTPS obligatoire en K8s** : Keycloak 26 requiert un contexte sécurisé (HTTPS) quand il est accédé via une IP. Le cert auto-signé est généré automatiquement par `make k8s-init`.
+- **Init SQL** : le script `init.sql` n'est exécuté par PostgreSQL qu'au premier démarrage d'un volume vide.
+- **Ingress splitté** : trois ressources Ingress distinctes pour éviter les conflits de rewrite entre l'API, Keycloak et le frontend.

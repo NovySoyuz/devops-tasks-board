@@ -15,6 +15,20 @@ services:
     networks:
       - devops_net
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: devops_tasks_keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - devops_net
+
   backend:
     build:
       context: ../../backend
@@ -22,11 +36,15 @@ services:
     container_name: devops_tasks_backend
     environment:
       PORT: 3000
-      # On met déjà une DATABASE_URL pour la suite (même si non utilisée pour l'instant)
       DATABASE_URL: postgres://devops:devops@db:5432/tasksdb
       NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER: http://localhost:8080
+      KEYCLOAK_REALM: devops-tasks
+      KEYCLOAK_CLIENT_ID: devops-tasks-frontend
     depends_on:
       - db
+      - keycloak
     ports:
       - "3000:3000"
     networks:
@@ -38,10 +56,13 @@ services:
       dockerfile: Dockerfile
     container_name: devops_tasks_frontend
     environment:
-      # Le frontend utilisera cette URL pour appeler le backend
       VITE_API_URL: http://localhost:3000
+      VITE_KEYCLOAK_URL: http://localhost:8080
+      VITE_KEYCLOAK_REALM: devops-tasks
+      VITE_KEYCLOAK_CLIENT_ID: devops-tasks-frontend
     depends_on:
       - backend
+      - keycloak
     ports:
       - "5173:5173"
     networks:
@@ -49,8 +70,8 @@ services:
 
 volumes:
   db_data:
+  keycloak_data:
 
 networks:
   devops_net:
     driver: bridge
-

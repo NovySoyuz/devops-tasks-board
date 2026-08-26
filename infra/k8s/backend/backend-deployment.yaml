@@ -36,6 +36,16 @@ spec:
                   key: DATABASE_URL
             - name: NODE_ENV
               value: "production"
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-tasks-config
+                  key: KEYCLOAK_URL
+            - name: KEYCLOAK_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-tasks-config
+                  key: KEYCLOAK_REALM
           livenessProbe:
             httpGet:
               path: /health

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const pool = require("./db");
+const authenticate = require("./middleware/auth");
 
 dotenv.config();
 
@@ -11,35 +12,37 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// Route publique — pas d'auth
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
 
-app.get("/projects", async (req, res) => {
+// Routes protégées par le JWT Keycloak
+app.get("/projects", authenticate, async (req, res) => {
     const { rows } = await pool.query("SELECT * FROM projects ORDER BY id");
     res.json(rows);
 });
 
-app.get("/tasks", async (req, res) => {
+app.get("/tasks", authenticate, async (req, res) => {
     const { rows } = await pool.query("SELECT * FROM tasks ORDER BY id");
     res.json(rows);
 });
 
-app.post("/tasks", async (req, res) => {
+app.post("/tasks", authenticate, async (req, res) => {
     const { title, projectId, type, priority, status } = req.body;
     if (!title || !projectId) {
         return res.status(400).json({ error: "title et projectId sont obligatoires" });
     }
     const { rows } = await pool.query(
         `INSERT INTO tasks (title, "projectId", type, priority, status)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
         [title, projectId, type || "général", priority || "normale", status || "todo"]
     );
     res.status(201).json(rows[0]);
 });
 
 // Suppression d'une tâche par son identifiant
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/tasks/:id", authenticate, async (req, res) => {
     const { id } = req.params;
     const { rowCount } = await pool.query("DELETE FROM tasks WHERE id = $1", [id]);
     if (rowCount === 0) return res.status(404).json({ error: "Tâche introuvable" });

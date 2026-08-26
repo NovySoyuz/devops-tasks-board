@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-deployment
+  labels:
+    app: devops-tasks
+    tier: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-tasks
+      tier: keycloak
+  template:
+    metadata:
+      labels:
+        app: devops-tasks
+        tier: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0
+          args: ["start-dev"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: devops-tasks-secret
+                  key: KEYCLOAK_ADMIN_USER
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devops-tasks-secret
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            # Keycloak fait confiance aux headers X-Forwarded-* de Nginx (TLS terminaison ingress)
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            # Évite les refus de requêtes sur hostname inconnu (nécessaire derrière ingress)
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+          volumeMounts:
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: keycloak-data
+          persistentVolumeClaim:
+            claimName: keycloak-pvc

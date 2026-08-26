@@ -1,118 +1,102 @@
 # ==============================================================
 # Makefile — DevOps Tasks Board
-# Usage : make <cible>   |   make help pour la liste complète
 # ==============================================================
 
 COMPOSE_FILE = infra/docker/docker-compose.yaml
 K8S_DIR      = infra/k8s
 INIT_SQL     = infra/k8s/postgres/init.sql
+MINIKUBE_IP  := $(shell minikube ip 2>/dev/null || echo "localhost")
 
-.PHONY: help init up down restart build deploy logs ps \
-        k8s-init k8s-up k8s-down k8s-status k8s-deploy
+.PHONY: help init up down logs k8s-init k8s-down k8s-deploy k8s-status _k8s-tls
 
-# ── Aide ────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
-	@echo "  DevOps Tasks Board — commandes disponibles"
+	@echo "  Docker (dev local)"
+	@echo "    make init          → 1ère installation : build + start + init BDD"
+	@echo "    make up            → démarrer (rebuild si nécessaire)"
+	@echo "    make down          → arrêter"
+	@echo "    make logs          → suivre les logs"
 	@echo ""
-	@echo "  Docker Compose (dev local) :"
-	@echo "    make init       → 1ère installation : build + démarrage + init BDD"
-	@echo "    make up         → démarrer les conteneurs"
-	@echo "    make down       → arrêter et supprimer les conteneurs"
-	@echo "    make restart    → redémarrer les conteneurs"
-	@echo "    make build      → rebuilder les images Docker"
-	@echo "    make deploy     → rebuilder et relancer sans toucher à la BDD"
-	@echo "    make logs       → suivre les logs en temps réel"
-	@echo "    make ps         → statut des conteneurs"
+	@echo "  Kubernetes (minikube)"
+	@echo "    make k8s-init      → déployer tout le cluster (idempotent)"
+	@echo "    make k8s-deploy    → rebuilder les images et relancer les pods"
+	@echo "    make k8s-down      → supprimer toutes les ressources"
+	@echo "    make k8s-status    → état des pods / services / ingress"
 	@echo ""
-	@echo "  Kubernetes :"
-	@echo "    make k8s-init   → 1er déploiement (applique tous les manifests)"
-	@echo "    make k8s-up     → appliquer les manifests k8s"
-	@echo "    make k8s-deploy → rebuilder les images et redémarrer les pods"
-	@echo "    make k8s-down   → supprimer toutes les ressources k8s"
-	@echo "    make k8s-status → afficher l'état des pods / services"
+	@echo "  URLs Docker  →  http://localhost:5173  |  Keycloak: http://localhost:8080"
+	@echo "  URLs K8s     →  https://$(MINIKUBE_IP)  |  Admin KC: https://$(MINIKUBE_IP)/admin"
 	@echo ""
 
-# ── Docker Compose ──────────────────────────────────────────────────────────
+# ── Docker ──────────────────────────────────────────────────────────────────
 
-# Première installation : build, démarrage et initialisation de la base de données
 init:
-	@echo "🚀 Initialisation du projet..."
 	docker compose -f $(COMPOSE_FILE) up -d --build
-	@echo "⏳ Attente du démarrage de PostgreSQL (10s)..."
+	@echo "⏳ Attente de PostgreSQL..."
 	@sleep 10
-	@echo "📦 Initialisation de la base de données..."
 	docker exec -i devops_tasks_db psql -U devops -d tasksdb < $(INIT_SQL)
-	@echo ""
-	@echo "✅ Projet prêt :"
-	@echo "   → Frontend : http://localhost:5173"
-	@echo "   → Backend  : http://localhost:3000"
+	@echo "✅  http://localhost:5173  |  Keycloak: http://localhost:8080 (admin/admin)"
 
-# Démarrer les conteneurs existants
 up:
-	docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d --build
 
-# Arrêter et supprimer les conteneurs (les volumes sont conservés)
 down:
 	docker compose -f $(COMPOSE_FILE) down
 
-restart:
-	docker compose -f $(COMPOSE_FILE) restart
-# Rebuilder les images sans redémarrer
-build:
-	docker compose -f $(COMPOSE_FILE) build
-
-# Rebuilder et relancer sans toucher à la BDD
-deploy:
-	docker compose -f $(COMPOSE_FILE) up -d --build
-
-# Suivre les logs de tous les services
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
-# Afficher le statut des conteneurs
-ps:
-	docker compose -f $(COMPOSE_FILE) ps
+# ── Kubernetes ───────────────────────────────────────────────────────────────
 
-# ── Kubernetes ──────────────────────────────────────────────────────────────
-
-# Premier déploiement : applique les manifests dans le bon ordre
 k8s-init:
-	@echo "🚀 Déploiement initial sur Kubernetes..."
+	kubectl create configmap postgres-initdb-config \
+		--from-file=init.sql=$(INIT_SQL) \
+		--dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f $(K8S_DIR)/config/
 	kubectl apply -f $(K8S_DIR)/postgres/
+	kubectl apply -f $(K8S_DIR)/keycloak/
 	kubectl apply -f $(K8S_DIR)/backend/
 	kubectl apply -f $(K8S_DIR)/frontend/
 	kubectl apply -f $(K8S_DIR)/ingress.yaml
-	@echo "✅ Déploiement terminé — vérifiez avec : make k8s-status"
+	@$(MAKE) _k8s-tls
 
-# Mettre à jour les ressources k8s (applique les changements)
-k8s-up:
-	kubectl apply -f $(K8S_DIR)/config/
-	kubectl apply -f $(K8S_DIR)/postgres/
-	kubectl apply -f $(K8S_DIR)/backend/
-	kubectl apply -f $(K8S_DIR)/frontend/
-	kubectl apply -f $(K8S_DIR)/ingress.yaml
+k8s-deploy:
+	eval $$(minikube docker-env) && \
+		docker build -t tasks-frontend:latest ./frontend && \
+		docker build -t tasks-backend:latest ./backend
+	kubectl rollout restart deployment/frontend-deployment deployment/backend-deployment
+	@echo "✅ Pods redémarrés — make k8s-status pour vérifier"
 
-# Supprimer toutes les ressources k8s
 k8s-down:
 	kubectl delete -f $(K8S_DIR)/ingress.yaml --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/frontend/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/backend/ --ignore-not-found
+	kubectl delete -f $(K8S_DIR)/keycloak/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/postgres/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/config/ --ignore-not-found
+	kubectl delete configmap postgres-initdb-config --ignore-not-found
+	kubectl delete secret devops-tasks-tls --ignore-not-found
 
-# Afficher l'état des pods, services et ingress
 k8s-status:
 	kubectl get pods,services,ingress
 
-# Rebuilder les images directement dans le daemon Docker de minikube, puis redémarrer les pods
-k8s-deploy:
-	@echo "🔨 Build des images dans le daemon Docker de minikube..."
-	eval $$(minikube docker-env) && \
-		docker build -t tasks-frontend:latest ./frontend && \
-		docker build -t tasks-backend:latest ./backend
-	@echo "♻️  Redémarrage des pods..."
-	kubectl rollout restart deployment/frontend-deployment
-	kubectl rollout restart deployment/backend-deployment
-	@echo "✅ Déploiement terminé — vérifiez avec : make k8s-status"
+# Génère le cert TLS auto-signé et injecte les URLs HTTPS dans les pods.
+# Appelé automatiquement par k8s-init — pas besoin de le lancer manuellement.
+_k8s-tls:
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+		-keyout /tmp/devops-tasks-tls.key \
+		-out /tmp/devops-tasks-tls.crt \
+		-subj "/CN=$(MINIKUBE_IP)/O=DevOps" \
+		-addext "subjectAltName=IP:$(MINIKUBE_IP)" 2>/dev/null
+	kubectl create secret tls devops-tasks-tls \
+		--cert=/tmp/devops-tasks-tls.crt \
+		--key=/tmp/devops-tasks-tls.key \
+		--dry-run=client -o yaml | kubectl apply -f -
+	kubectl set env deployment/frontend-deployment \
+		VITE_KEYCLOAK_URL=https://$(MINIKUBE_IP) \
+		VITE_API_URL=/api
+	kubectl set env deployment/backend-deployment \
+		KEYCLOAK_ISSUER=https://$(MINIKUBE_IP)
+	kubectl rollout status deployment/frontend-deployment --timeout=120s
+	kubectl rollout status deployment/backend-deployment --timeout=120s
+	@echo "✅  https://$(MINIKUBE_IP)  |  Admin KC: https://$(MINIKUBE_IP)/admin (admin/admin)"
+	@echo "⚠️  Accepter l'avertissement certificat dans le navigateur"

@@ -7,3 +7,6 @@ data:
   BACKEND_PORT: "3000"
   POSTGRES_HOST: "postgres-service"
   POSTGRES_DB: "tasksdb"
+  KEYCLOAK_URL: "http://keycloak-service:8080"
+  KEYCLOAK_REALM: "devops-tasks"
+  KEYCLOAK_CLIENT_ID: "devops-tasks-frontend"
