@@ -26,6 +26,7 @@ services:
       NODE_ENV: development
       AUTH0_DOMAIN: dev-iazccw3gseusnctx.eu.auth0.com
       AUTH0_AUDIENCE: https://devops-tasks-api
+      FRONTEND_URL: "http://localhost:5173"
     depends_on:
       - db
     ports:

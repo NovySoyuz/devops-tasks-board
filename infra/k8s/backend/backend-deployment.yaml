@@ -46,6 +46,11 @@ spec:
                 configMapKeyRef:
                   name: devops-tasks-config
                   key: AUTH0_AUDIENCE
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-tasks-config
+                  key: FRONTEND_URL
           livenessProbe:
             httpGet:
               path: /health
