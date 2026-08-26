@@ -2,17 +2,14 @@
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 
-const isKeycloakEnabled = !!process.env.KEYCLOAK_URL;
+const AUTH0_DOMAIN   = process.env.AUTH0_DOMAIN;
+const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE || "https://devops-tasks-api";
 
-// KEYCLOAK_URL    : URL interne pour récupérer les clés JWKS (ex: http://keycloak:8080 dans Docker)
-// KEYCLOAK_ISSUER : URL publique vue du navigateur pour valider l'issuer du JWT
-//                   (ex: http://localhost:8080 en dev Docker)
-//                   Si absent, on utilise KEYCLOAK_URL (cas local / K8s via NodePort)
-const issuerBase = process.env.KEYCLOAK_ISSUER || process.env.KEYCLOAK_URL;
+const isAuthEnabled = !!AUTH0_DOMAIN;
 
-const client = isKeycloakEnabled
+const client = isAuthEnabled
     ? jwksClient({
-        jwksUri: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/certs`,
+        jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`,
         cache: true,
         rateLimit: true,
     })
@@ -26,7 +23,7 @@ function getKey(header, callback) {
 }
 
 function authenticate(req, res, next) {
-    if (!isKeycloakEnabled) return next();
+    if (!isAuthEnabled) return next();
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -38,7 +35,8 @@ function authenticate(req, res, next) {
         token,
         getKey,
         {
-            issuer: `${issuerBase}/realms/${process.env.KEYCLOAK_REALM}`,
+            issuer: `https://${AUTH0_DOMAIN}/`,
+            audience: AUTH0_AUDIENCE,
             algorithms: ["RS256"],
         },
         (err, decoded) => {

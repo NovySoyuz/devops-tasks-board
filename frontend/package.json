@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "keycloak-js": "^26.0.0",
+    "@auth0/auth0-react": "^2.24.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

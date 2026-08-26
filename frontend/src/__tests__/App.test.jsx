@@ -3,6 +3,17 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 import App from "../App";
 
+vi.mock("@auth0/auth0-react", () => ({
+    useAuth0: () => ({
+        isAuthenticated: true,
+        isLoading: false,
+        loginWithRedirect: vi.fn(),
+        logout: vi.fn(),
+        getAccessTokenSilently: vi.fn().mockResolvedValue("mock-token"),
+        user: { nickname: "testuser", name: "Test User" },
+    }),
+}));
+
 const mockProjects = [{ id: 1, name: "Projet Alpha" }];
 const mockTasks = [
     { id: 1, title: "Ma tâche", projectId: 1, type: "général", priority: "normale", status: "todo" },

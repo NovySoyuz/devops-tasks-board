@@ -36,16 +36,16 @@ spec:
                   key: DATABASE_URL
             - name: NODE_ENV
               value: "production"
-            - name: KEYCLOAK_URL
+            - name: AUTH0_DOMAIN
               valueFrom:
                 configMapKeyRef:
                   name: devops-tasks-config
-                  key: KEYCLOAK_URL
-            - name: KEYCLOAK_REALM
+                  key: AUTH0_DOMAIN
+            - name: AUTH0_AUDIENCE
               valueFrom:
                 configMapKeyRef:
                   name: devops-tasks-config
-                  key: KEYCLOAK_REALM
+                  key: AUTH0_AUDIENCE
           livenessProbe:
             httpGet:
               path: /health

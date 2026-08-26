@@ -26,14 +26,18 @@ spec:
           env:
             - name: VITE_API_URL
               value: "/api"
-            - name: VITE_KEYCLOAK_REALM
+            - name: VITE_AUTH0_DOMAIN
               valueFrom:
                 configMapKeyRef:
                   name: devops-tasks-config
-                  key: KEYCLOAK_REALM
-            - name: VITE_KEYCLOAK_CLIENT_ID
+                  key: AUTH0_DOMAIN
+            - name: VITE_AUTH0_CLIENT_ID
               valueFrom:
                 configMapKeyRef:
                   name: devops-tasks-config
-                  key: KEYCLOAK_CLIENT_ID
-            # VITE_KEYCLOAK_URL est injecté dynamiquement via kubectl set env (make k8s-https ou k8s-local)
+                  key: AUTH0_CLIENT_ID
+            - name: VITE_AUTH0_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-tasks-config
+                  key: AUTH0_AUDIENCE

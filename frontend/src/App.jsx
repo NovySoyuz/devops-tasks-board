@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -14,8 +15,13 @@ const TYPE_CSS_KEY = {
   "infra":    "infra",
 };
 
-function getAuthHeaders(keycloak) {
-  return keycloak?.token ? { Authorization: `Bearer ${keycloak.token}` } : {};
+async function getAuthHeaders(getToken) {
+  try {
+    const token = await getToken();
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return {};
+  }
 }
 
 function TaskCard({ task, project, onDelete }) {
@@ -74,7 +80,8 @@ function KanbanColumn({ status, tasks, projects, onDelete }) {
   );
 }
 
-function App({ keycloak }) {
+function App() {
+  const { isAuthenticated, isLoading, loginWithRedirect, logout, getAccessTokenSilently, user } = useAuth0();
   const [tasks, setTasks]             = useState([]);
   const [projects, setProjects]       = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -89,11 +96,16 @@ function App({ keycloak }) {
   });
 
   useEffect(() => {
+    if (!isLoading && !isAuthenticated) loginWithRedirect();
+  }, [isLoading, isAuthenticated, loginWithRedirect]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchData = async () => {
       try {
         setLoading(true);
         setError("");
-        const headers = getAuthHeaders(keycloak);
+        const headers = await getAuthHeaders(getAccessTokenSilently);
         const [projectsRes, tasksRes] = await Promise.all([
           fetch(`${API_URL}/projects`, { headers }),
           fetch(`${API_URL}/tasks`, { headers }),
@@ -115,7 +127,7 @@ function App({ keycloak }) {
       }
     };
     fetchData();
-  }, []);
+  }, [isAuthenticated, getAccessTokenSilently]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -130,9 +142,10 @@ function App({ keycloak }) {
       return;
     }
     try {
+      const authHeaders = await getAuthHeaders(getAccessTokenSilently);
       const res = await fetch(`${API_URL}/tasks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders(keycloak) },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           title: form.title.trim(),
           projectId: Number(form.projectId),
@@ -153,9 +166,10 @@ function App({ keycloak }) {
 
   const handleDelete = async (taskId) => {
     try {
+      const headers = await getAuthHeaders(getAccessTokenSilently);
       const res = await fetch(`${API_URL}/tasks/${taskId}`, {
         method: "DELETE",
-        headers: getAuthHeaders(keycloak),
+        headers,
       });
       if (!res.ok) throw new Error("Erreur lors de la suppression.");
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -169,7 +183,9 @@ function App({ keycloak }) {
       ? tasks.filter((t) => String(t.projectId) === filterProject)
       : tasks;
 
-  const username = keycloak?.tokenParsed?.preferred_username;
+  const username = user?.nickname || user?.name;
+
+  if (isLoading || !isAuthenticated) return null;
 
   return (
       <div className="app">
@@ -196,12 +212,12 @@ function App({ keycloak }) {
               ))}
             </div>
 
-            {keycloak && (
+            {username && (
                 <div className="app-header__user">
                   <span className="app-header__username">👤 {username}</span>
                   <button
                       className="btn btn--logout"
-                      onClick={() => keycloak.logout({ redirectUri: window.location.origin })}
+                      onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
                   >
                     Déconnexion
                   </button>

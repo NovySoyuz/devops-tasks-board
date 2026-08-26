@@ -53,7 +53,6 @@ k8s-init:
 		--dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -f $(K8S_DIR)/config/
 	kubectl apply -f $(K8S_DIR)/postgres/
-	kubectl apply -f $(K8S_DIR)/keycloak/
 	kubectl apply -f $(K8S_DIR)/backend/
 	kubectl apply -f $(K8S_DIR)/frontend/
 	kubectl apply -f $(K8S_DIR)/ingress.yaml
@@ -70,7 +69,6 @@ k8s-down:
 	kubectl delete -f $(K8S_DIR)/ingress.yaml --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/frontend/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/backend/ --ignore-not-found
-	kubectl delete -f $(K8S_DIR)/keycloak/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/postgres/ --ignore-not-found
 	kubectl delete -f $(K8S_DIR)/config/ --ignore-not-found
 	kubectl delete configmap postgres-initdb-config --ignore-not-found
@@ -91,12 +89,7 @@ _k8s-tls:
 		--cert=/tmp/devops-tasks-tls.crt \
 		--key=/tmp/devops-tasks-tls.key \
 		--dry-run=client -o yaml | kubectl apply -f -
-	kubectl set env deployment/frontend-deployment \
-		VITE_KEYCLOAK_URL=https://$(MINIKUBE_IP) \
-		VITE_API_URL=/api
-	kubectl set env deployment/backend-deployment \
-		KEYCLOAK_ISSUER=https://$(MINIKUBE_IP)
 	kubectl rollout status deployment/frontend-deployment --timeout=120s
 	kubectl rollout status deployment/backend-deployment --timeout=120s
-	@echo "✅  https://$(MINIKUBE_IP)  |  Admin KC: https://$(MINIKUBE_IP)/admin (admin/admin)"
-	@echo "⚠️  Accepter l'avertissement certificat dans le navigateur"
+	@echo "✅  https://$(MINIKUBE_IP)"
+	@echo "⚠️  Ajouter https://$(MINIKUBE_IP) dans Auth0 → Applications → Allowed Callback/Logout/Web Origins"

@@ -15,20 +15,6 @@ services:
     networks:
       - devops_net
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: devops_tasks_keycloak
-    command: start-dev
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-    ports:
-      - "8080:8080"
-    volumes:
-      - keycloak_data:/opt/keycloak/data
-    networks:
-      - devops_net
-
   backend:
     build:
       context: ../../backend
@@ -38,13 +24,10 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://devops:devops@db:5432/tasksdb
       NODE_ENV: development
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER: http://localhost:8080
-      KEYCLOAK_REALM: devops-tasks
-      KEYCLOAK_CLIENT_ID: devops-tasks-frontend
+      AUTH0_DOMAIN: dev-iazccw3gseusnctx.eu.auth0.com
+      AUTH0_AUDIENCE: https://devops-tasks-api
     depends_on:
       - db
-      - keycloak
     ports:
       - "3000:3000"
     networks:
@@ -57,12 +40,11 @@ services:
     container_name: devops_tasks_frontend
     environment:
       VITE_API_URL: http://localhost:3000
-      VITE_KEYCLOAK_URL: http://localhost:8080
-      VITE_KEYCLOAK_REALM: devops-tasks
-      VITE_KEYCLOAK_CLIENT_ID: devops-tasks-frontend
+      VITE_AUTH0_DOMAIN: dev-iazccw3gseusnctx.eu.auth0.com
+      VITE_AUTH0_CLIENT_ID: F1m7hqlwUsAdxVXTYvfhE7fsn4IlyvBz
+      VITE_AUTH0_AUDIENCE: https://devops-tasks-api
     depends_on:
       - backend
-      - keycloak
     ports:
       - "5173:5173"
     networks:
@@ -70,7 +52,6 @@ services:
 
 volumes:
   db_data:
-  keycloak_data:
 
 networks:
   devops_net:
