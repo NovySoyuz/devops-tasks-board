@@ -2,9 +2,9 @@ name: CI DevOps Tasks Board
 
 on:
   push:
-    branches: ["feature/*", "main"]
+    branches: ["feature/*", "develop", "main"]
   pull_request:
-    branches: ["feature/*", "main"]
+    branches: ["feature/*", "develop", "main"]
 
 jobs:
   # ── 1. Lint ──────────────────────────────────────────────────────────────────
