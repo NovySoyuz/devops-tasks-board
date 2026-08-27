@@ -242,7 +242,7 @@ function App() {
                       name="title"
                       value={form.title}
                       onChange={handleChange}
-                      placeholder="Ex : Ajouter un test d'intégration test"
+                      placeholder="Ex : Ajouter un test d'intégration"
                   />
                 </div>
                 <div className="field">

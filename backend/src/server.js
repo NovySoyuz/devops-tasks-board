@@ -7,6 +7,7 @@ const authenticate = require("./middleware/auth");
 dotenv.config();
 
 const app = express();
+app.disable("x-powered-by"); // ne pas exposer la version d'Express dans les headers HTTP
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(",").map((o) => o.trim())
   : ["http://localhost:5173", "http://localhost:4173"];

@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: tasksdb
       POSTGRES_USER: devops
-      POSTGRES_PASSWORD: devops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit être défini dans .env}
     ports:
       - "5432:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     container_name: devops_tasks_backend
     environment:
       PORT: 3000
-      DATABASE_URL: postgres://devops:devops@db:5432/tasksdb
+      DATABASE_URL: postgres://devops:${POSTGRES_PASSWORD}@db:5432/tasksdb
       NODE_ENV: development
       AUTH0_DOMAIN: dev-iazccw3gseusnctx.eu.auth0.com
       AUTH0_AUDIENCE: https://devops-tasks-api

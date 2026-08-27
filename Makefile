@@ -7,7 +7,7 @@ K8S_DIR      = infra/k8s
 INIT_SQL     = infra/k8s/postgres/init.sql
 MINIKUBE_IP  := $(shell minikube ip 2>/dev/null || echo "localhost")
 
-.PHONY: help init up down logs k8s-init k8s-down k8s-deploy k8s-status _k8s-tls
+.PHONY: help init up down logs k8s-init k8s-secrets k8s-down k8s-deploy k8s-status _k8s-tls
 
 help:
 	@echo ""
@@ -19,6 +19,7 @@ help:
 	@echo ""
 	@echo "  Kubernetes (minikube)"
 	@echo "    make k8s-init      → déployer tout le cluster (idempotent)"
+	@echo "    make k8s-secrets   → créer/mettre à jour le secret K8s (mots de passe)"
 	@echo "    make k8s-deploy    → rebuilder les images et relancer les pods"
 	@echo "    make k8s-down      → supprimer toutes les ressources"
 	@echo "    make k8s-status    → état des pods / services / ingress"
@@ -47,7 +48,18 @@ logs:
 
 # ── Kubernetes ───────────────────────────────────────────────────────────────
 
+# Crée/met à jour le Secret K8s avec les mots de passe (ne jamais committer les vraies valeurs dans secret.yaml)
+k8s-secrets:
+	kubectl create secret generic devops-tasks-secret \
+		--from-literal=POSTGRES_USER=devops \
+		--from-literal=POSTGRES_PASSWORD=devops \
+		--from-literal=DATABASE_URL=postgres://devops:devops@postgres-service:5432/tasksdb \
+		--from-literal=KEYCLOAK_ADMIN_USER=admin \
+		--from-literal=KEYCLOAK_ADMIN_PASSWORD=admin \
+		--dry-run=client -o yaml | kubectl apply -f -
+
 k8s-init:
+	@$(MAKE) k8s-secrets
 	kubectl create configmap postgres-initdb-config \
 		--from-file=init.sql=$(INIT_SQL) \
 		--dry-run=client -o yaml | kubectl apply -f -

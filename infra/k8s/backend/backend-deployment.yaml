@@ -17,12 +17,20 @@ spec:
         app: devops-tasks
         tier: backend
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: backend
           image: tasks-backend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
           env:
             - name: PORT
               valueFrom:

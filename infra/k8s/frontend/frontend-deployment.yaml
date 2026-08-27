@@ -17,12 +17,20 @@ spec:
         app: devops-tasks
         tier: frontend
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: frontend
           image: tasks-frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5173
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           env:
             - name: VITE_API_URL
               value: "/api"
