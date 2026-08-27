@@ -1,6 +1,5 @@
 name: CI DevOps Tasks Board
 
-# Déclenché sur chaque push ou PR vers une branche feature ou main
 on:
   push:
     branches: ["feature/*", "main"]
@@ -8,22 +7,17 @@ on:
     branches: ["feature/*", "main"]
 
 jobs:
-  # ── 1er job : lint ──────────────────────────────────────────────────────────
-  # Vérifie la qualité du code avant de lancer les tests.
-  # Si le lint échoue, les jobs suivants ne s'exécutent pas (fail fast).
+  # ── 1. Lint ──────────────────────────────────────────────────────────────────
   lint:
     name: Lint (backend & frontend)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
 
-      # Lint backend
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
@@ -32,7 +26,6 @@ jobs:
         working-directory: backend
         run: npm run lint
 
-      # Lint frontend
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -41,55 +34,87 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
-  # ── 2ème job : backend ──────────────────────────────────────────────────────
-  # Lance les tests unitaires du backend (Jest + Supertest).
-  # Bloqué tant que le job lint n'est pas vert.
+  # ── 2. Backend tests + coverage ──────────────────────────────────────────────
   backend:
-    name: Backend - tests
+    name: Backend - tests & coverage
     runs-on: ubuntu-latest
-    needs: lint  # dépend du job lint
+    needs: lint
     defaults:
       run:
         working-directory: backend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run backend tests
-        run: npm test
+      - name: Run tests with coverage
+        run: npm test -- --coverage --coverageReporters=lcov
 
-  # ── 3ème job : frontend ─────────────────────────────────────────────────────
-  # Lance les tests (Vitest) puis le build de production.
-  # Le build valide qu'il n'y a pas d'erreur de compilation avant un déploiement.
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/lcov.info
+
+  # ── 3. Frontend tests + coverage + build ────────────────────────────────────
   frontend:
-    name: Frontend - tests & build
+    name: Frontend - tests, coverage & build
     runs-on: ubuntu-latest
-    needs: backend  # dépend du job backend
+    needs: backend
     defaults:
       run:
         working-directory: frontend
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run frontend tests
-        run: npm test
+      - name: Run tests with coverage
+        run: npm test -- --coverage
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
 
       - name: Build frontend
         run: npm run build
+
+  # ── 4. SonarCloud ────────────────────────────────────────────────────────────
+  sonar:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet pour l'analyse blame
+
+      - name: Download backend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
