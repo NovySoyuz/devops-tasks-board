@@ -16,12 +16,8 @@ const TYPE_CSS_KEY = {
 };
 
 async function getAuthHeaders(getToken) {
-  try {
-    const token = await getToken();
-    return { Authorization: `Bearer ${token}` };
-  } catch {
-    return {};
-  }
+  const token = await getToken(); // lève une exception si non authentifié → bloque l'appel API
+  return { Authorization: `Bearer ${token}` };
 }
 
 function TaskCard({ task, project, onDelete }) {

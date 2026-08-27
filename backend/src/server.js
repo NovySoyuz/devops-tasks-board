@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const dotenv = require("dotenv");
 const pool = require("./db");
 const authenticate = require("./middleware/auth");
@@ -8,6 +9,7 @@ dotenv.config();
 
 const app = express();
 app.disable("x-powered-by"); // ne pas exposer la version d'Express dans les headers HTTP
+app.use(helmet());            // security headers (CSP, HSTS, X-Frame-Options, etc.)
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(",").map((o) => o.trim())
   : ["http://localhost:5173", "http://localhost:4173"];
