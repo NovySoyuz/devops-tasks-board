@@ -190,7 +190,7 @@ function App() {
             <div className="app-header__brand">
               <span className="app-header__icon" aria-hidden="true">🛡️</span>
               <div>
-                <h1 className="app-header__title">DevOps Tasks Board</h1>
+                <h1 className="app-header__title">DevOps Tasks Board v2</h1>
                 <p className="app-header__desc">
                   Suivi des tâches DevOps &amp; DevSecOps par projet.
                 </p>
