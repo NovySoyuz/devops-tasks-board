@@ -143,9 +143,17 @@ app.delete("/admin/users/:id", requireAuth, requireModerator, async (req, res) =
 });
 
 if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`✅ Backend démarré sur http://localhost:${PORT}`);
-    });
+    const migrate = require("./migrate");
+    migrate()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log(`✅ Backend démarré sur http://localhost:${PORT}`);
+            });
+        })
+        .catch((err) => {
+            console.error("❌ Échec de la migration au démarrage:", err.message);
+            process.exit(1);
+        });
 }
 
 module.exports = app;

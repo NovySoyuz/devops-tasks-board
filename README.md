@@ -250,5 +250,5 @@ Le rôle n'est pas géré uniquement en base locale : il provient d'un **rôle A
 ## Notes
 
 - **HTTPS en K8s** : le cert auto-signé est généré automatiquement par `make k8s-init`. Accepter l'alerte de sécurité du navigateur.
-- **Init SQL** : le script `init.sql` n'est exécuté par PostgreSQL qu'au premier démarrage d'un volume vide.
+- **Init SQL** : le script `init.sql` n'est exécuté par PostgreSQL qu'au premier démarrage d'un volume vide. Pour les tables ajoutées après coup (ex. `users`), le backend exécute au démarrage une migration idempotente (`backend/src/migrate.js`, `CREATE TABLE IF NOT EXISTS`) qui les crée automatiquement même sur une base déjà existante (Render, volume Docker local...).
 - **Ingress splitté** : deux ressources Ingress distinctes pour éviter les conflits de rewrite entre l'API et le frontend.
