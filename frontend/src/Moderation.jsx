@@ -1,6 +1,6 @@
 // frontend/src/Moderation.jsx
 import { useEffect, useState } from "react";
-import { API_URL, getAuthHeaders } from "./api";
+import { API_URL, getAuthHeaders, toSafeId } from "./api";
 
 const emptyProjectForm = { id: null, name: "", description: "" };
 
@@ -32,7 +32,7 @@ function Moderation({ getAccessTokenSilently, projects, onProjectsChange }) {
         if (!window.confirm("Bannir cet utilisateur ? Il perdra l'accès à l'application.")) return;
         try {
             const headers = await getAuthHeaders(getAccessTokenSilently);
-            const res = await fetch(`${API_URL}/admin/users/${id}`, { method: "DELETE", headers });
+            const res = await fetch(`${API_URL}/admin/users/${toSafeId(id)}`, { method: "DELETE", headers });
             if (!res.ok) throw new Error("Erreur lors du bannissement");
             setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, banned: true } : u)));
         } catch (err) {
@@ -56,7 +56,7 @@ function Moderation({ getAccessTokenSilently, projects, onProjectsChange }) {
         try {
             const authHeaders = await getAuthHeaders(getAccessTokenSilently);
             const isEdit = projectForm.id !== null;
-            const res = await fetch(`${API_URL}/projects${isEdit ? `/${projectForm.id}` : ""}`, {
+            const res = await fetch(`${API_URL}/projects${isEdit ? `/${toSafeId(projectForm.id)}` : ""}`, {
                 method: isEdit ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders },
                 body: JSON.stringify({
@@ -84,7 +84,7 @@ function Moderation({ getAccessTokenSilently, projects, onProjectsChange }) {
         if (!window.confirm("Supprimer ce projet ?")) return;
         try {
             const headers = await getAuthHeaders(getAccessTokenSilently);
-            const res = await fetch(`${API_URL}/projects/${id}`, { method: "DELETE", headers });
+            const res = await fetch(`${API_URL}/projects/${toSafeId(id)}`, { method: "DELETE", headers });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 throw new Error(body.error || "Erreur lors de la suppression");
