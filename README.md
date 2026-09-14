@@ -205,9 +205,13 @@ La CI GitHub Actions exécute **lint → tests → coverage → SonarCloud** sur
 - **Authentification** : Auth0 (OIDC / OAuth2) — JWT RS256 validé côté backend
 - **Headers HTTP** : `helmet` (CSP, HSTS, X-Frame-Options, etc.)
 - **CORS** : origines autorisées configurées via variable d'environnement
+- **Rate limiting** : `express-rate-limit` (100 req / 15 min / IP) contre le brute-force et le DDoS
+- **Validation des payloads** : schémas `zod` sur les routes de création (remplace les vérifs manuelles), rejette toute donnée mal typée ou hors valeurs autorisées
 - **Secrets** : aucune valeur sensible commitée — variables d'environnement sur Render, `kubectl create secret` pour K8s
-- **Images Docker** : utilisateur non-root (`USER node`), `npm ci --ignore-scripts`
+- **Images Docker** : build multi-stage, utilisateur non-root (`USER node`), CLI `npm` retiré de l'image finale (moins de surface d'attaque, exécution via `node` direct), paquets système Alpine à jour (`apk upgrade`), scan de vulnérabilités **Trivy** en CI (bloque sur faille HIGH/CRITICAL)
+- **Dépendances** : **Dependabot** (veille hebdomadaire) + `npm audit --audit-level=high` en CI
 - **Analyse statique** : SonarCloud sur chaque push (bugs, vulnérabilités, code smells)
+- **Signalement de faille** : procédure documentée dans [`SECURITY.md`](./SECURITY.md)
 
 ---
 

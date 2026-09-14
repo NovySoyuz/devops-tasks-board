@@ -2,10 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const dotenv = require("dotenv");
+const rateLimit = require("express-rate-limit");
 const pool = require("./db");
 const authenticate = require("./middleware/auth");
+const { taskSchema } = require("./schemas/taskSchema");
 
-dotenv.config();
+dotenv.config({ quiet: true }); // désactive les logs/"tips" promotionnels de dotenv
 
 const app = express();
 app.disable("x-powered-by"); // ne pas exposer la version d'Express dans les headers HTTP
@@ -21,6 +23,16 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Anti brute-force / anti-DDoS : limite chaque IP à 100 requêtes / 15 min sur l'API
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Trop de requêtes, veuillez réessayer plus tard." },
+});
+app.use(apiLimiter);
 
 const PORT = process.env.PORT || 3000;
 
@@ -41,14 +53,15 @@ app.get("/tasks", authenticate, async (req, res) => {
 });
 
 app.post("/tasks", authenticate, async (req, res) => {
-    const { title, projectId, type, priority, status } = req.body;
-    if (!title || !projectId) {
-        return res.status(400).json({ error: "title et projectId sont obligatoires" });
+    const parsed = taskSchema.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
     }
+    const { title, projectId, type, priority, status } = parsed.data;
     const { rows } = await pool.query(
         `INSERT INTO tasks (title, "projectId", type, priority, status)
          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [title, projectId, type || "général", priority || "normale", status || "todo"]
+        [title, projectId, type, priority, status]
     );
     res.status(201).json(rows[0]);
 });
