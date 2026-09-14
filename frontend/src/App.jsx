@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { API_URL, ROLES_CLAIM, getAuthHeaders } from "./api";
+import Moderation from "./Moderation";
 import "./App.css";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const STATUS_COLUMNS = ["todo", "doing", "done"];
 const STATUS_LABELS  = { todo: "À faire", doing: "En cours", done: "Terminé" };
@@ -14,11 +14,6 @@ const TYPE_CSS_KEY = {
   "sécurité": "securite",
   "infra":    "infra",
 };
-
-async function getAuthHeaders(getToken) {
-  const token = await getToken(); // lève une exception si non authentifié → bloque l'appel API
-  return { Authorization: `Bearer ${token}` };
-}
 
 function TaskCard({ task, project, onDelete }) {
   const typeKey = TYPE_CSS_KEY[task.type] ?? "general";
@@ -83,6 +78,7 @@ function App() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
   const [filterProject, setFilterProject] = useState("");
+  const [view, setView]               = useState("board"); // "board" | "moderation"
   const [form, setForm] = useState({
     title: "",
     projectId: "",
@@ -90,6 +86,9 @@ function App() {
     priority: "normale",
     status: "todo",
   });
+
+  const roles = user?.[ROLES_CLAIM] || [];
+  const isModerator = Array.isArray(roles) && roles.includes("moderator");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) loginWithRedirect();
@@ -220,12 +219,37 @@ function App() {
                 </div>
             )}
           </div>
+
+          {isModerator && (
+              <div className="view-tabs">
+                <button
+                    className={`view-tab ${view === "board" ? "view-tab--active" : ""}`}
+                    onClick={() => setView("board")}
+                >
+                  Tableau
+                </button>
+                <button
+                    className={`view-tab ${view === "moderation" ? "view-tab--active" : ""}`}
+                    onClick={() => setView("moderation")}
+                >
+                  🛠️ Modération
+                </button>
+              </div>
+          )}
         </header>
 
         <main className="app-main">
           {loading && <div className="feedback feedback--loading">Chargement…</div>}
           {error   && <div className="feedback feedback--error">⚠️&nbsp;{error}</div>}
 
+          {view === "moderation" ? (
+              <Moderation
+                  getAccessTokenSilently={getAccessTokenSilently}
+                  projects={projects}
+                  onProjectsChange={setProjects}
+              />
+          ) : (
+          <>
           <section className="card">
             <h2 className="section-heading">Ajouter une nouvelle tâche</h2>
             <form onSubmit={handleSubmit} className="task-form">
@@ -238,7 +262,7 @@ function App() {
                       name="title"
                       value={form.title}
                       onChange={handleChange}
-                      placeholder="Ex : Ajouter un test d'intégration v2"
+                      placeholder="Ajouter un test d'intégration"
                   />
                 </div>
                 <div className="field">
@@ -318,6 +342,8 @@ function App() {
               ))}
             </div>
           </section>
+          </>
+          )}
         </main>
       </div>
   );

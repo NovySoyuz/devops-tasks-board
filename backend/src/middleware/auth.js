@@ -4,6 +4,8 @@ const jwksClient = require("jwks-rsa");
 
 const AUTH0_DOMAIN   = process.env.AUTH0_DOMAIN;
 const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE || "https://devops-tasks-api";
+// Claim personnalisé injecté par l'Auth0 Action "Add roles to token" (voir README)
+const ROLES_CLAIM = `${AUTH0_AUDIENCE}/roles`;
 
 const isAuthEnabled = !!AUTH0_DOMAIN;
 
@@ -51,3 +53,5 @@ function authenticate(req, res, next) {
 }
 
 module.exports = authenticate;
+module.exports.isAuthEnabled = isAuthEnabled;
+module.exports.ROLES_CLAIM = ROLES_CLAIM;
