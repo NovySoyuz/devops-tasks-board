@@ -75,7 +75,7 @@ describe("App", () => {
         await waitFor(() => {
             expect(screen.getByText("Ma tâche")).toBeInTheDocument();
         });
-        expect(screen.queryByText("Modération")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Modération/)).not.toBeInTheDocument();
     });
 
     it("montre l'onglet Modération et la liste des utilisateurs à un modérateur", async () => {
@@ -88,7 +88,7 @@ describe("App", () => {
             },
         });
         render(<App />);
-        const modTab = await screen.findByText("Modération");
+        const modTab = await screen.findByText(/Modération/);
         fireEvent.click(modTab);
 
         await waitFor(() => {
