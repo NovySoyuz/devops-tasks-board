@@ -15,7 +15,7 @@ const TYPE_CSS_KEY = {
   "infra":    "infra",
 };
 
-function TaskCard({ task, project, onDelete }) {
+function TaskCard({ task, project, onDelete, onStatusChange }) {
   const typeKey = TYPE_CSS_KEY[task.type] ?? "general";
 
   return (
@@ -42,11 +42,21 @@ function TaskCard({ task, project, onDelete }) {
           {PRIORITY_LABELS[task.priority] ?? task.priority}
         </span>
         </div>
+        <select
+            className="field__select field__select--sm task-card__status"
+            aria-label={`Changer le statut de « ${task.title} »`}
+            value={task.status}
+            onChange={(e) => onStatusChange(task.id, e.target.value)}
+        >
+          {STATUS_COLUMNS.map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+          ))}
+        </select>
       </article>
   );
 }
 
-function KanbanColumn({ status, tasks, projects, onDelete }) {
+function KanbanColumn({ status, tasks, projects, onDelete, onStatusChange }) {
   return (
       <div className={`kanban-col kanban-col--${status}`}>
         <header className="kanban-col__header">
@@ -63,6 +73,7 @@ function KanbanColumn({ status, tasks, projects, onDelete }) {
                       task={task}
                       project={projects.find((p) => p.id === task.projectId)}
                       onDelete={onDelete}
+                      onStatusChange={onStatusChange}
                   />
               ))
           )}
@@ -171,6 +182,25 @@ function App() {
     } catch (err) {
       console.error(err);
       setError("Impossible de supprimer la tâche.");
+    }
+  };
+
+  // Changement de statut d'une tâche (à faire / en cours / terminé), accessible
+  // à tout utilisateur connecté depuis le tableau Kanban.
+  const handleStatusChange = async (taskId, status) => {
+    try {
+      const authHeaders = await getAuthHeaders(getAccessTokenSilently);
+      const res = await fetch(`${API_URL}/tasks/${toSafeId(taskId)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Erreur lors du changement de statut.");
+      const updated = await res.json();
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+    } catch (err) {
+      console.error(err);
+      setError("Impossible de changer le statut de la tâche.");
     }
   };
 
@@ -338,6 +368,7 @@ function App() {
                       tasks={visibleTasks.filter((t) => t.status === status)}
                       projects={projects}
                       onDelete={handleDelete}
+                      onStatusChange={handleStatusChange}
                   />
               ))}
             </div>

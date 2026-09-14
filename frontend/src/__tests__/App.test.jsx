@@ -100,5 +100,57 @@ describe("App", () => {
             expect(screen.getByText("Ajouter une nouvelle tâche")).toBeInTheDocument();
         });
     });
+
+    it("permet de changer le statut d'une tâche via le sélecteur", async () => {
+        vi.stubGlobal("fetch", vi.fn((url, options) => {
+            if (options?.method === "PATCH" && url.includes("/tasks/1/status")) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve({ ...mockTasks[0], status: "doing" }),
+                });
+            }
+            if (url.includes("/projects")) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve(mockProjects) });
+            }
+            if (url.includes("/tasks")) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTasks) });
+            }
+            return Promise.reject(new Error("URL inconnue"));
+        }));
+
+        render(<App />);
+        const select = await screen.findByLabelText(/Changer le statut/i);
+        fireEvent.change(select, { target: { value: "doing" } });
+
+        await waitFor(() => {
+            expect(fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/tasks/1/status"),
+                expect.objectContaining({ method: "PATCH" })
+            );
+        });
+    });
+
+    it("affiche une erreur si le changement de statut échoue", async () => {
+        vi.stubGlobal("fetch", vi.fn((url, options) => {
+            if (options?.method === "PATCH") {
+                return Promise.resolve({ ok: false });
+            }
+            if (url.includes("/projects")) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve(mockProjects) });
+            }
+            if (url.includes("/tasks")) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTasks) });
+            }
+            return Promise.reject(new Error("URL inconnue"));
+        }));
+
+        render(<App />);
+        const select = await screen.findByLabelText(/Changer le statut/i);
+        fireEvent.change(select, { target: { value: "done" } });
+
+        await waitFor(() => {
+            expect(screen.getByText(/Impossible de changer le statut/i)).toBeInTheDocument();
+        });
+    });
 });
 

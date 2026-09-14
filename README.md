@@ -215,6 +215,12 @@ La CI GitHub Actions exécute **lint → tests → coverage → SonarCloud** sur
 
 ---
 
+## Tableau des tâches
+
+Chaque tâche affiche un sélecteur de statut (**À faire / En cours / Terminé**) directement sur sa carte, dans les trois colonnes du Kanban. Changer la valeur déplace la tâche vers la colonne correspondante via `PATCH /tasks/:id/status`. Cette action est accessible à **tous les utilisateurs authentifiés** (pas réservée aux modérateurs) : n'importe quel membre de l'équipe peut faire avancer une tâche.
+
+---
+
 ## Modération
 
 Un onglet **Modération** apparaît dans l'interface uniquement pour les utilisateurs ayant le rôle `moderator`. Il permet :

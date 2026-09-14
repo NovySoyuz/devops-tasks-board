@@ -12,4 +12,10 @@ const taskSchema = z.object({
     status: z.enum(["todo", "doing", "done"]).default("todo"),
 });
 
-module.exports = { taskSchema };
+// Schéma de validation pour le changement de statut seul (déplacement Kanban).
+// Ouvert à tous les utilisateurs authentifiés, pas seulement aux modérateurs.
+const taskStatusSchema = z.object({
+    status: z.enum(["todo", "doing", "done"], { message: "status doit être 'todo', 'doing' ou 'done'" }),
+});
+
+module.exports = { taskSchema, taskStatusSchema };

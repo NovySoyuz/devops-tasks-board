@@ -7,7 +7,7 @@ const pool = require("./db");
 const authenticate = require("./middleware/auth");
 const loadUser = require("./middleware/loadUser");
 const requireModerator = require("./middleware/requireModerator");
-const { taskSchema } = require("./schemas/taskSchema");
+const { taskSchema, taskStatusSchema } = require("./schemas/taskSchema");
 const { projectSchema } = require("./schemas/projectSchema");
 
 dotenv.config({ quiet: true }); // désactive les logs/"tips" promotionnels de dotenv
@@ -114,6 +114,22 @@ app.post("/tasks", requireAuth, async (req, res) => {
         [title, projectId, type, priority, status]
     );
     res.status(201).json(rows[0]);
+});
+
+// Changement de statut d'une tâche (à faire / en cours / terminé) — ouvert à
+// tous les utilisateurs authentifiés (pas réservé aux modérateurs), permet à
+// n'importe quel membre de l'équipe de faire avancer une tâche sur le tableau.
+app.patch("/tasks/:id/status", requireAuth, async (req, res) => {
+    const parsed = taskStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+    }
+    const { rows } = await pool.query(
+        `UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *`,
+        [parsed.data.status, req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Tâche introuvable" });
+    res.json(rows[0]);
 });
 
 // Suppression d'une tâche par son identifiant

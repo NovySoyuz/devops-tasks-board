@@ -417,6 +417,12 @@
   margin-top: 0.1rem;
 }
 
+/* Sélecteur de statut permettant de déplacer la tâche entre les colonnes */
+.task-card__status {
+  margin-top: 0.4rem;
+  align-self: flex-start;
+}
+
 /* ================================================================
    Badges (type & priorité)
    ================================================================ */

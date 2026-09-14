@@ -59,6 +59,32 @@ describe("POST /tasks", () => {
     });
 });
 
+describe("PATCH /tasks/:id/status", () => {
+    it("met à jour le statut d'une tâche et retourne 200 (accessible à tout utilisateur)", async () => {
+        const updated = { id: 1, title: "Ma tâche", status: "doing" };
+        pool.query.mockResolvedValueOnce({ rows: [updated] });
+
+        const res = await request(app)
+            .patch("/tasks/1/status")
+            .send({ status: "doing" });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(updated);
+    });
+
+    it("retourne 400 si le statut est invalide", async () => {
+        const res = await request(app).patch("/tasks/1/status").send({ status: "archivé" });
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty("error");
+    });
+
+    it("retourne 404 si la tâche n'existe pas", async () => {
+        pool.query.mockResolvedValueOnce({ rows: [] });
+        const res = await request(app).patch("/tasks/999/status").send({ status: "done" });
+        expect(res.status).toBe(404);
+    });
+});
+
 describe("POST /projects (modération)", () => {
     it("crée un projet et retourne 201", async () => {
         const newProject = { id: 1, name: "Nouveau projet", description: "desc" };
