@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { API_URL, ROLES_CLAIM, getAuthHeaders } from "./api";
+import { API_URL, ROLES_CLAIM, getAuthHeaders, toSafeId } from "./api";
 import Moderation from "./Moderation";
 import "./App.css";
 
@@ -162,7 +162,7 @@ function App() {
   const handleDelete = async (taskId) => {
     try {
       const headers = await getAuthHeaders(getAccessTokenSilently);
-      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+      const res = await fetch(`${API_URL}/tasks/${toSafeId(taskId)}`, {
         method: "DELETE",
         headers,
       });
