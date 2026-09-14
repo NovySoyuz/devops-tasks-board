@@ -217,7 +217,7 @@ La CI GitHub Actions exécute **lint → tests → coverage → SonarCloud** sur
 
 ## Modération
 
-Un onglet **🛠️ Modération** apparaît dans l'interface uniquement pour les utilisateurs ayant le rôle `moderator`. Il permet :
+Un onglet **Modération** apparaît dans l'interface uniquement pour les utilisateurs ayant le rôle `moderator`. Il permet :
 
 - **Gestion des utilisateurs** : liste des comptes (nom, email, rôle, statut, dernière connexion) avec un bouton **Bannir**. ⚠️ Il ne s'agit **pas** d'une suppression du compte Auth0 : le compte reste utilisable pour se connecter, mais l'utilisateur banni (`banned = true` en base) se voit refuser l'accès à l'API (403) dès sa prochaine requête. C'est un choix volontaire et plus simple qu'une suppression réelle via l'API de Management Auth0.
 - **Modération du contenu** : création, modification et suppression des projets (`POST/PUT/DELETE /projects`), en plus de la suppression de tâches déjà existante.

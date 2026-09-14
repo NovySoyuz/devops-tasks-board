@@ -14,7 +14,7 @@ const baseAuth = {
     isLoading: false,
     loginWithRedirect: vi.fn(),
     logout: vi.fn(),
-    getAccessTokenSilently: vi.fn().mockResolvedValue("mock-token"),
+    getAccessTokenSilently: vi.fn().mockResolvedValue("mock-token"), // NOSONAR - valeur factice de test, pas un vrai token
 };
 
 const mockProjects = [{ id: 1, name: "Projet Alpha" }];
@@ -75,7 +75,7 @@ describe("App", () => {
         await waitFor(() => {
             expect(screen.getByText("Ma tâche")).toBeInTheDocument();
         });
-        expect(screen.queryByText("🛠️ Modération")).not.toBeInTheDocument();
+        expect(screen.queryByText("Modération")).not.toBeInTheDocument();
     });
 
     it("montre l'onglet Modération et la liste des utilisateurs à un modérateur", async () => {
@@ -88,11 +88,16 @@ describe("App", () => {
             },
         });
         render(<App />);
-        const modTab = await screen.findByText("🛠️ Modération");
+        const modTab = await screen.findByText("Modération");
         fireEvent.click(modTab);
 
         await waitFor(() => {
             expect(screen.getByText("test@example.com")).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText("Tableau"));
+        await waitFor(() => {
+            expect(screen.getByText("Ajouter une nouvelle tâche")).toBeInTheDocument();
         });
     });
 });
