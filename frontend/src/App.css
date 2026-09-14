@@ -55,6 +55,30 @@
   color: var(--text);
 }
 
+/* ── Onglets Tableau / Modération ── */
+.view-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.view-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.4rem 0.2rem;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.view-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 /* ── Chips de compteurs par statut ── */
 .stat-bar {
   display: flex;
@@ -239,6 +263,19 @@
 
 .btn--primary:hover { opacity: 0.87; }
 
+.btn--sm {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  align-self: auto;
+}
+
+.btn--danger {
+  background: rgba(220, 38, 38, .12);
+  color: #dc2626;
+}
+
+.btn--danger:hover { opacity: 0.8; }
+
 /* ================================================================
    Barre d'outils du tableau
    ================================================================ */
@@ -403,6 +440,41 @@
 .badge--priority-haute   { background: rgba(220,  38,  38, .12); color: #dc2626; }
 .badge--priority-normale { background: rgba(217, 119,   6, .12); color: #d97706; }
 .badge--priority-basse   { background: rgba(107, 114, 128, .12); color: #6b7280; }
+
+/* ── Rôle (modération) ── */
+.badge--role-moderator { background: rgba(124,  58, 237, .12); color: #7c3aed; }
+.badge--role-user      { background: rgba(107, 114, 128, .14); color: #6b7280; }
+
+/* ================================================================
+   Modération – tableaux utilisateurs / projets
+   ================================================================ */
+.mod {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mod-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.mod-table th {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  color: var(--text);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.mod-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.mod-table--projects { margin-top: 1rem; }
 
 /* ================================================================
    Responsive – les colonnes s'empilent sur petits écrans

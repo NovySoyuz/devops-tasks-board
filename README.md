@@ -183,7 +183,7 @@ make k8s-status   # état des pods / services / ingress
 ## Tests
 
 ```bash
-cd backend  && npm test             # Jest + Supertest (6 tests)
+cd backend  && npm test             # Jest + Supertest (15 tests)
 cd frontend && npm test             # Vitest + Testing Library
 cd backend  && npm test -- --coverage   # avec rapport de couverture
 ```
@@ -212,6 +212,38 @@ La CI GitHub Actions exécute **lint → tests → coverage → SonarCloud** sur
 - **Dépendances** : **Dependabot** (veille hebdomadaire) + `npm audit --audit-level=high` en CI
 - **Analyse statique** : SonarCloud sur chaque push (bugs, vulnérabilités, code smells)
 - **Signalement de faille** : procédure documentée dans [`SECURITY.md`](./SECURITY.md)
+
+---
+
+## Modération
+
+Un onglet **🛠️ Modération** apparaît dans l'interface uniquement pour les utilisateurs ayant le rôle `moderator`. Il permet :
+
+- **Gestion des utilisateurs** : liste des comptes (nom, email, rôle, statut, dernière connexion) avec un bouton **Bannir**. ⚠️ Il ne s'agit **pas** d'une suppression du compte Auth0 : le compte reste utilisable pour se connecter, mais l'utilisateur banni (`banned = true` en base) se voit refuser l'accès à l'API (403) dès sa prochaine requête. C'est un choix volontaire et plus simple qu'une suppression réelle via l'API de Management Auth0.
+- **Modération du contenu** : création, modification et suppression des projets (`POST/PUT/DELETE /projects`), en plus de la suppression de tâches déjà existante.
+
+Côté backend, ces routes sont protégées par le middleware `requireModerator`, qui s'appuie sur le rôle transmis par Auth0 dans le token (voir ci-dessous) et synchronisé dans la table `users` à chaque requête authentifiée (`loadUser`).
+
+### Comment attribuer le rôle `moderator` à un utilisateur (Auth0)
+
+Le rôle n'est pas géré uniquement en base locale : il provient d'un **rôle Auth0**, injecté dans le token via une **Action**, pour rester la source de vérité même si la base est réinitialisée.
+
+1. **Créer le rôle** : Auth0 Dashboard → *User Management* → *Roles* → *Create Role* → nom `moderator`.
+2. **Assigner le rôle** : *User Management* → *Users* → sélectionner l'utilisateur → onglet *Roles* → *Assign Roles* → `moderator`.
+3. **Créer une Action Post-Login** qui ajoute les rôles au token : Auth0 Dashboard → *Actions* → *Flows* → *Login* → *Add Action* → *Build Custom* :
+
+   ```js
+   exports.onExecutePostLogin = async (event, api) => {
+     const namespace = "https://devops-tasks-api"; // doit correspondre à AUTH0_AUDIENCE / VITE_AUTH0_AUDIENCE
+     if (event.authorization) {
+       api.idToken.setCustomClaim(`${namespace}/roles`, event.authorization.roles);
+       api.accessToken.setCustomClaim(`${namespace}/roles`, event.authorization.roles);
+     }
+   };
+   ```
+
+   Déployer l'Action puis la glisser dans le flow **Login** (elle doit apparaître entre *Start* et *Complete*).
+4. **Se reconnecter** : le nouveau token contient alors `https://devops-tasks-api/roles: ["moderator"]`, lu côté frontend (`user[ROLES_CLAIM]`) pour afficher l'onglet, et côté backend (middleware `auth.js` / `loadUser.js`) pour synchroniser le rôle en base et autoriser les routes de modération.
 
 ---
 
