@@ -192,6 +192,14 @@ La CI GitHub Actions exécute **lint → tests → coverage → SonarCloud** sur
 
 ---
 
+## Gestion des évolutions & ticketing
+
+- **Templates GitHub Issues** (`.github/ISSUE_TEMPLATE/`) : formulaires dédiés *bug report* et *feature request* pour cadrer les demandes (contexte, criticité/priorité, critères d'acceptation).
+- **Template de Pull Request** (`.github/PULL_REQUEST_TEMPLATE.md`) : checklist qualité (tests, lint, doc, sécurité) et lien systématique vers le ticket associé.
+- **Veille technologique** : **Dependabot** (`.github/dependabot.yml`) surveille chaque semaine les dépendances npm (backend/frontend) et les actions GitHub utilisées en CI, et ouvre automatiquement une PR en cas de mise à jour ou de faille connue.
+
+---
+
 ## Sécurité
 
 - **Authentification** : Auth0 (OIDC / OAuth2) — JWT RS256 validé côté backend
