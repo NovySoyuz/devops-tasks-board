@@ -5,7 +5,17 @@ COPY package*.json ./
 # --omit=dev : pas d'ESLint/Jest/nodemon dans l'image finale (surface d'attaque réduite)
 RUN npm ci --omit=dev --ignore-scripts
 
-# ---- Étape 2 : image d'exécution ----
+# ---- Étape dev : image utilisée en local/minikube pour le hot reload (nodemon + tout le code monté en volume) ----
+FROM node:24-alpine AS dev
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --ignore-scripts
+COPY --chown=node:node . .
+USER node
+EXPOSE 3000
+CMD ["node_modules/.bin/nodemon", "--legacy-watch", "src/server.js"]
+
+# ---- Étape 2 : image d'exécution (production) ----
 FROM node:24-alpine
 WORKDIR /app
 # Applique les derniers correctifs de sécurité des paquets système Alpine (ex : OpenSSL)

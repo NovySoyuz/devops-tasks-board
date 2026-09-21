@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci --ignore-scripts
 
 # ---- Étape 2 : image d'exécution ----
-FROM node:22-alpine
+FROM node:22-alpine AS dev
 WORKDIR /app
 # Applique les derniers correctifs de sécurité des paquets système Alpine (ex : OpenSSL)
 RUN apk update && apk upgrade --no-cache
@@ -19,4 +19,6 @@ USER node
 # Variables nécessaires pour Vite (port par défaut 5173)
 EXPOSE 5173
 # Lancer le serveur de dev Vite directement (npm non disponible dans l'image finale)
+# --host 0.0.0.0 : accessible depuis l'extérieur du conteneur
+# HMR (hot reload) fonctionne dès que ./src est monté en volume (voir docker-compose.yaml)
 CMD ["node_modules/.bin/vite", "--host", "0.0.0.0", "--port", "5173"]
