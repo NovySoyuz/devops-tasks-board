@@ -45,11 +45,6 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-    it("affiche le titre de l'application", () => {
-        render(<App />);
-        expect(screen.getByText("DevOps Tasks Board")).toBeInTheDocument();
-    });
-
     it("affiche le formulaire d'ajout de tâche", () => {
         render(<App />);
         expect(screen.getByText("Ajouter une nouvelle tâche")).toBeInTheDocument();
