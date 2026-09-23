@@ -34,6 +34,7 @@ const apiLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Trop de requêtes, veuillez réessayer plus tard." },
+    skip: (req) => req.path === "/health",
 });
 app.use(apiLimiter);
 
